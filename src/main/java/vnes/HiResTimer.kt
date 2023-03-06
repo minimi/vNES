@@ -15,50 +15,45 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package vnes;
+package vnes
 
-public class HiResTimer {
-
-    public long currentMicros() {
-        return System.nanoTime() / 1000;
+class HiResTimer {
+    fun currentMicros(): Long {
+        return System.nanoTime() / 1000
     }
 
-    public long currentTick() {
-        return System.nanoTime();
+    fun currentTick(): Long {
+        return System.nanoTime()
     }
 
-    public void sleepMicros(long time) {
-
+    fun sleepMicros(time: Long) {
         try {
-
-            long nanos = time - (time / 1000) * 1000;
+            var nanos = time - time / 1000 * 1000
             if (nanos > 999999) {
-                nanos = 999999;
+                nanos = 999999
             }
-            Thread.sleep(time / 1000, (int) nanos);
-
-        } catch (Exception e) {
+            Thread.sleep(time / 1000, nanos.toInt())
+        } catch (e: Exception) {
 
             //System.out.println("Sleep interrupted..");
-            e.printStackTrace();
-
+            e.printStackTrace()
         }
-
     }
 
-    public void sleepMillisIdle(int millis) {
-
-        millis /= 10;
-        millis *= 10;
-
+    @Suppress("NAME_SHADOWING")
+    fun sleepMillisIdle(millis: Int) {
+        var millis = millis
+        millis /= 10
+        millis *= 10
         try {
-            Thread.sleep(millis);
-        } catch (InterruptedException ie) {
+            Thread.sleep(millis.toLong())
+        } catch (ie: InterruptedException) {
+            //System.out.println("Sleep interrupted..");
+            ie.printStackTrace()
         }
-
     }
 
-    public void yield() {
-        Thread.yield();
+    fun yield() {
+        Thread.yield()
     }
 }
