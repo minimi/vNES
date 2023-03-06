@@ -19,7 +19,7 @@ package vnes;
 public class PPU {
 
     private NES nes;
-    private HiResTimer timer;
+    //private HiResTimer timer;
     private Memory ppuMem;
     private Memory sprMem;
     // Rendering Options:
@@ -155,7 +155,7 @@ public class PPU {
 
         // Initialize misc vars:
         scanline = 0;
-        timer = nes.getGui().getTimer();
+        //timer = nes.getGui().getTimer();
 
         // Create sprite arrays:
         sprX = new int[64];
