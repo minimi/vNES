@@ -14,98 +14,66 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package vnes
 
-package vnes;
+import org.jetbrains.annotations.NotNull
+import java.io.File
+import java.io.FileWriter
+import java.io.IOException
+import java.util.*
 
+class Memory(
+    val memSize: Int
+) {
+    @JvmField
+    var mem: ShortArray = ShortArray(memSize)
 
-import java.io.*;
+    fun stateLoad(buf: ByteBuffer) {
+        buf.readByteArray(mem)
+    }
 
-public class Memory{
+    fun stateSave(buf: ByteBuffer) {
+        buf.putByteArray(mem)
+    }
 
-	public short[] mem;
-	int memLength;
-	NES nes;
+    fun reset() {
+        Arrays.fill(mem, 0.toShort())
+    }
 
-	public Memory(NES nes, int byteCount){
-		this.nes = nes;
-		mem = new short[byteCount];
-		memLength = byteCount;
-	}
+    fun write(address: Int, value: Short) {
+        mem[address] = value
+    }
 
-	public void stateLoad(ByteBuffer buf){
+    fun load(address: Int): Short {
+        return mem[address]
+    }
 
-		if(mem==null)mem=new short[memLength];
-		buf.readByteArray(mem);
+    @JvmOverloads
+    fun dump(@NotNull file: String, offset: Int = 0, length: Int = mem.size) {
+        val ch = CharArray(length)
+        for (i in 0 until length) {
+            ch[i] = Char(mem[offset + i].toUShort())
+        }
+        try {
+            val f = File(file)
+            val writer = FileWriter(f)
+            writer.write(ch)
+            writer.close()
+            //System.out.println("Memory dumped to file "+file+".");
+        } catch (ioe: IOException) {
+            //System.out.println("Memory dump to file: IO Error!");
+        }
+    }
 
-	}
+    fun write(address: Int, array: ShortArray, length: Int) {
+        if (address + length > mem.size) return
+        System.arraycopy(array, 0, mem, address, length)
+    }
 
-	public void stateSave(ByteBuffer buf){
+    fun write(address: Int, array: ShortArray, arrayOffset: Int, length: Int) {
+        if (address + length > mem.size) return
+        System.arraycopy(array, arrayOffset, mem, address, length)
+    }
 
-		buf.putByteArray(mem);
-
-	}
-
-	public void reset(){
-		for(int i=0;i<mem.length;i++)mem[i] = 0;
-	}
-
-	public int getMemSize(){
-		return memLength;
-	}
-
-	public void write(int address, short value){
-		mem[address] = value;
-	}
-
-	public short load(int address){
-		return mem[address];
-	}
-
-	public void dump(String file){
-		dump(file,0,mem.length);
-	}
-
-	public void dump(String file, int offset, int length){
-
-		char[] ch = new char[length];
-		for(int i=0;i<length;i++){
-			ch[i] = (char)mem[offset+i];
-		}
-
-		try{
-
-			File f = new File(file);
-			FileWriter writer = new FileWriter(f);
-			writer.write(ch);
-			writer.close();
-			//System.out.println("Memory dumped to file "+file+".");
-
-		}catch(IOException ioe){
-			//System.out.println("Memory dump to file: IO Error!");
-		}
-
-
-	}
-
-	public void write(int address, short[] array, int length){
-
-		if(address+length > mem.length)return;
-		System.arraycopy(array,0,mem,address,length);
-
-	}
-
-	public void write(int address, short[] array, int arrayoffset, int length){
-
-		if(address+length > mem.length)return;
-		System.arraycopy(array,arrayoffset,mem,address,length);
-
-	}
-
-	public void destroy(){
-
-		nes = null;
-		mem = null;
-
-	}
-
+    fun destroy() { }
 }

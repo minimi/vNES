@@ -41,9 +41,9 @@ public class NES {
         this.gui = gui;
 
         // Create memory:
-        cpuMem = new Memory(this, 0x10000);	// Main memory (internal to CPU)
-        ppuMem = new Memory(this, 0x8000);	// VRAM memory (internal to PPU)
-        sprMem = new Memory(this, 0x100);	// Sprite RAM  (internal to PPU)
+        cpuMem = new Memory(0x10000);	// Main memory (internal to CPU)
+        ppuMem = new Memory(0x8000);	// VRAM memory (internal to PPU)
+        sprMem = new Memory(0x100);	// Sprite RAM  (internal to PPU)
 
 
         // Create system units:
