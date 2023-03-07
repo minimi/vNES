@@ -14,9 +14,8 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package vnes
 
-package vnes;
-
-public interface FileLoader {
-    short[] loadFile(String fileName);
+interface FileLoader {
+    fun loadFile(fileName: String): ShortArray
 }
