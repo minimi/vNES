@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/android,androidstudio,intellij+all,java,kotlin,gradle
 # Edit at https://www.toptal.com/developers/gitignore?templates=android,androidstudio,intellij+all,java,kotlin,gradle
 vnes.nes
+vnes.nes.zip
 
 ### Android ###
 # Gradle files
