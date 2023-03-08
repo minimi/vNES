@@ -105,12 +105,12 @@ public class Mapper009 extends MapperDefault {
                     if ((value & 0x1) == 0) {
 
                         // Vertical mirroring
-                        nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                        this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
 
                     } else {
 
                         // Horizontal mirroring
-                        nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                        this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
 
                     }
                     return;
@@ -144,7 +144,7 @@ public class Mapper009 extends MapperDefault {
         loadBatteryRam();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 

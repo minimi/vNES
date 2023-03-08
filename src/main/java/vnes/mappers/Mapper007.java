@@ -81,9 +81,9 @@ public class Mapper007 extends MapperDefault {
 
                 currentMirroring = value & 0x10;
                 if (currentMirroring == 0) {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+                    this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING);
                 } else {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING2);
+                    this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING2);
                 }
 
             }

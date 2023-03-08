@@ -174,7 +174,7 @@ public class Mapper068 extends MapperDefault {
         loadBatteryRam();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 

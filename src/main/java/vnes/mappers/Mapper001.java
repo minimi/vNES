@@ -168,11 +168,11 @@ public class Mapper001 extends MapperDefault {
                 if ((mirroring & 2) == 0) {
                     // SingleScreen mirroring overrides the other setting:
                     ////System.out.println("MMC1: Setting Singlescreen Mirroring.");
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+                    this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING);
                 } else {
                     // Not overridden by SingleScreen mirroring.
                     ////System.out.println("MMC1: Setting Normal Mirroring. value="+mirroring);
-                    nes.getPpu().setMirroring((mirroring & 1) != 0 ? ROM.HORIZONTAL_MIRRORING : ROM.VERTICAL_MIRRORING);
+                    this.ppu.setMirroring((mirroring & 1) != 0 ? ROM.HORIZONTAL_MIRRORING : ROM.VERTICAL_MIRRORING);
                 }
             }
 
@@ -191,7 +191,7 @@ public class Mapper001 extends MapperDefault {
             romSelectionReg0 = (value >> 4) & 1;
 
             // Check whether the cart has VROM:
-            if (nes.getRom().getVromBankCount() > 0) {
+            if (this.rom.getVromBankCount() > 0) {
 
                 // Select VROM bank at 0x0000:
                 if (vromSwitchingSize == 0) {
@@ -201,7 +201,7 @@ public class Mapper001 extends MapperDefault {
                     if (romSelectionReg0 == 0) {
                         load8kVromBank((value & 0xF), 0x0000);
                     } else {
-                        load8kVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x0000);
+                        load8kVromBank(this.rom.getVromBankCount() / 2 + (value & 0xF), 0x0000);
                     }
 
                 } else {
@@ -213,7 +213,7 @@ public class Mapper001 extends MapperDefault {
                     if (romSelectionReg0 == 0) {
                         loadVromBank((value & 0xF), 0x0000);
                     } else {
-                        loadVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x0000);
+                        loadVromBank(this.rom.getVromBankCount() / 2 + (value & 0xF), 0x0000);
                     }
 
                 }
@@ -226,7 +226,7 @@ public class Mapper001 extends MapperDefault {
             romSelectionReg1 = (value >> 4) & 1;
 
             // Check whether the cart has VROM:
-            if (nes.getRom().getVromBankCount() > 0) {
+            if (this.rom.getVromBankCount() > 0) {
 
                 // Select VROM bank at 0x1000:
                 if (vromSwitchingSize == 1) {
@@ -237,7 +237,7 @@ public class Mapper001 extends MapperDefault {
                     if (romSelectionReg1 == 0) {
                         loadVromBank((value & 0xF), 0x1000);
                     } else {
-                        loadVromBank(nes.getRom().getVromBankCount() / 2 + (value & 0xF), 0x1000);
+                        loadVromBank(this.rom.getVromBankCount() / 2 + (value & 0xF), 0x1000);
                     }
 
                 }
@@ -251,7 +251,7 @@ public class Mapper001 extends MapperDefault {
             tmp = value & 0xF;
             int bank;
             int baseBank = 0;
-            int bankCount = nes.getRom().getRomBankCount();
+            int bankCount = this.rom.getRomBankCount();
 
             if (bankCount >= 32) {
 
@@ -333,7 +333,7 @@ public class Mapper001 extends MapperDefault {
 
         // Do Reset-Interrupt:
         //nes.getCpu().doResetInterrupt();
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 

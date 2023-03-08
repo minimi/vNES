@@ -60,6 +60,6 @@ public class Mapper087 extends MapperDefault {
         // Load Battery RAM (if present):
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
     }
 }

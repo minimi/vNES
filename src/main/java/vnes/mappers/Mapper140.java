@@ -41,7 +41,7 @@ public class Mapper140 extends MapperDefault {
         loadCHRROM();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 

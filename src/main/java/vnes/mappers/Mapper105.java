@@ -82,15 +82,15 @@ public class Mapper105 extends MapperDefault {
 
             if ((regs[0] & 0x02) != 0) {
                 if ((regs[0] & 0x01) != 0) {
-                    nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                    this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                 } else {
-                    nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                    this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                 }
             } else {
                 if ((regs[0] & 0x01) != 0) {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING2);
+                    this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING2);
                 } else {
-                    nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+                    this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING);
                 }
             }
 
@@ -172,7 +172,7 @@ public class Mapper105 extends MapperDefault {
         loadCHRROM();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 

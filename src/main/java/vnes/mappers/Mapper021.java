@@ -59,13 +59,13 @@ public class Mapper021 extends MapperDefault {
                      {
                         value &= 0x03;
                         if (value == 0) {
-                            nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                         } else if (value == 1) {
-                            nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                         } else if (value == 2) {
-                            nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING);
+                            this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING);
                         } else {
-                            nes.getPpu().setMirroring(ROM.SINGLESCREEN_MIRRORING2);
+                            this.ppu.setMirroring(ROM.SINGLESCREEN_MIRRORING2);
                         }
                     }
                     break;
@@ -265,7 +265,7 @@ public class Mapper021 extends MapperDefault {
         loadBatteryRam();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
     }
 
     public int syncH(int scanline) {

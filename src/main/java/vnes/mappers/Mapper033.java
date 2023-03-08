@@ -36,9 +36,9 @@ public class Mapper033 extends MapperDefault {
                 case 0x8000:
                      {
                         if ((value & 0x40) != 0) {
-                            nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                         } else {
-                            nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                         }
                         load8kRomBank(value & 0x1F, 0x8000);
                     }
@@ -109,6 +109,6 @@ public class Mapper033 extends MapperDefault {
         loadCHRROM();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
     }
 }

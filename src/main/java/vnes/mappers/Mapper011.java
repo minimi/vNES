@@ -37,8 +37,8 @@ public class Mapper011 extends MapperDefault {
         } else {
 
             // Swap in the given PRG-ROM bank:
-            int prgbank1 = ((value & 0xF) * 2) % nes.getRom().getRomBankCount();
-            int prgbank2 = ((value & 0xF) * 2 + 1) % nes.getRom().getRomBankCount();
+            int prgbank1 = ((value & 0xF) * 2) % this.rom.getRomBankCount();
+            int prgbank2 = ((value & 0xF) * 2 + 1) % this.rom.getRomBankCount();
 
             loadRomBank(prgbank1, 0x8000);
             loadRomBank(prgbank2, 0xC000);
@@ -46,7 +46,7 @@ public class Mapper011 extends MapperDefault {
 
             if (rom.getVromBankCount() > 0) {
                 // Swap in the given VROM bank at 0x0000:
-                int bank = ((value >> 4) * 2) % (nes.getRom().getVromBankCount());
+                int bank = ((value >> 4) * 2) % (this.rom.getVromBankCount());
                 loadVromBank(bank, 0x0000);
                 loadVromBank(bank + 1, 0x1000);
             }

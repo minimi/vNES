@@ -64,7 +64,7 @@ public class Mapper002 extends MapperDefault {
 
         // Do Reset-Interrupt:
         //nes.getCpu().doResetInterrupt();
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 }

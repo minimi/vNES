@@ -48,9 +48,9 @@ public class Mapper015 extends MapperDefault {
                             load8kRomBank((value & 0x3F) * 2 + 3, 0xE000);
                         }
                         if ((value & 0x40) != 0) {
-                            nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                         } else {
-                            nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                         }
                     }
                     break;
@@ -90,9 +90,9 @@ public class Mapper015 extends MapperDefault {
                             load8kRomBank((value & 0x3F) * 2 + 1, 0xE000);
                         }
                         if ((value & 0x40) != 0) {
-                            nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                         } else {
-                            nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                         }
                     }
                     break;
@@ -121,6 +121,6 @@ public class Mapper015 extends MapperDefault {
         loadBatteryRam();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
     }
 }

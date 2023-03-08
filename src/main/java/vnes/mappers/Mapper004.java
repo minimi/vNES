@@ -116,15 +116,15 @@ public class Mapper004 extends MapperDefault {
 
             // Mirroring select
             if ((value & 1) != 0) {
-                nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
             } else {
-                nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
             }
 
         } else if (address == 0xA001) {
 
             // SaveRAM Toggle
-            nes.getRom().setSaveState((value & 1) != 0);
+            this.rom.setSaveState((value & 1) != 0);
 
         } else if (address == 0xC000) {
 
@@ -224,10 +224,10 @@ public class Mapper004 extends MapperDefault {
                 //Globals.println("PRG Address has changed.");
                 // Load the two hardwired banks:
                 if (prgAddressSelect == 0) {
-                    load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2), 0xC000);
+                    load8kRomBank(((this.rom.getRomBankCount() - 1) * 2), 0xC000);
                 } else {
 
-                    load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2), 0x8000);
+                    load8kRomBank(((this.rom.getRomBankCount() - 1) * 2), 0x8000);
                 }
                 prgAddressChanged = false;
             }
@@ -253,10 +253,10 @@ public class Mapper004 extends MapperDefault {
                 //Globals.println("PRG Address has changed.");
                 // Load the two hardwired banks:
                 if (prgAddressSelect == 0) {
-                    load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2), 0xC000);
+                    load8kRomBank(((this.rom.getRomBankCount() - 1) * 2), 0xC000);
                 } else {
 
-                    load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2), 0x8000);
+                    load8kRomBank(((this.rom.getRomBankCount() - 1) * 2), 0x8000);
                 }
                 prgAddressChanged = false;
             }
@@ -274,8 +274,8 @@ public class Mapper004 extends MapperDefault {
         }
 
         // Load hardwired PRG banks (0xC000 and 0xE000):
-        load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2), 0xC000);
-        load8kRomBank(((nes.getRom().getRomBankCount() - 1) * 2) + 1, 0xE000);
+        load8kRomBank(((this.rom.getRomBankCount() - 1) * 2), 0xC000);
+        load8kRomBank(((this.rom.getRomBankCount() - 1) * 2) + 1, 0xE000);
 
         // Load swappable PRG banks (0x8000 and 0xA000):
         load8kRomBank(0, 0x8000);
@@ -289,7 +289,7 @@ public class Mapper004 extends MapperDefault {
 
         // Do Reset-Interrupt:
         //nes.getCpu().doResetInterrupt();
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 
@@ -301,7 +301,7 @@ public class Mapper004 extends MapperDefault {
 
                 // Trigger IRQ:
                 //nes.getCpu().doIrq();
-                nes.getCpu().requestIrq(CPU.IRQ_NORMAL);
+                this.cpu.requestIrq(CPU.IRQ_NORMAL);
                 irqCounter = irqLatchValue;
 
             }

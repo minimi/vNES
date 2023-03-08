@@ -41,9 +41,9 @@ public class Mapper182 extends MapperDefault {
                 case 0x8001:
                      {
                         if ((value & 0x01) != 0) {
-                            nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                         } else {
-                            nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                            this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                         }
                     }
                     break;
@@ -138,7 +138,7 @@ public class Mapper182 extends MapperDefault {
         loadCHRROM();
 
         // Do Reset-Interrupt:
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
     }
 
     public int syncH(int scanline) {

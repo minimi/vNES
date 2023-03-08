@@ -164,9 +164,9 @@ public class Mapper064 extends MapperDefault {
             case 0xA000:
                  {
                     if ((value & 0x01) == 0) {
-                        nes.getPpu().setMirroring(ROM.VERTICAL_MIRRORING);
+                        this.ppu.setMirroring(ROM.VERTICAL_MIRRORING);
                     } else {
-                        nes.getPpu().setMirroring(ROM.HORIZONTAL_MIRRORING);
+                        this.ppu.setMirroring(ROM.HORIZONTAL_MIRRORING);
                     }
                 }
                 break;
@@ -222,7 +222,7 @@ public class Mapper064 extends MapperDefault {
 
         System.out.println("CHR = " + chr_banks + "");
 
-        nes.getCpu().requestIrq(CPU.IRQ_RESET);
+        this.cpu.requestIrq(CPU.IRQ_RESET);
 
     }
 
