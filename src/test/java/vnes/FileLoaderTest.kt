@@ -24,7 +24,7 @@ class FileLoaderTest {
 
     @Test
     fun `can load NES file`() {
-        val fl = KFileLoader()
+        val fl = NESFileLoader()
 
         val res = fl.loadFile("vnes.nes")
 
@@ -35,7 +35,7 @@ class FileLoaderTest {
 
     @Test
     fun `can load NES file twice`() {
-        val fl = KFileLoader()
+        val fl = NESFileLoader()
 
         val res = fl.loadFile("vnes.nes")
 
@@ -53,7 +53,7 @@ class FileLoaderTest {
 
     @Test
     fun `can load ZIP file`() {
-        val fl = KFileLoader()
+        val fl = NESFileLoader()
 
         val res = fl.loadFile("vnes.nes.zip")
 
@@ -64,7 +64,7 @@ class FileLoaderTest {
 
     @Test
     fun `can load ZIP file twice`() {
-        val fl = KFileLoader()
+        val fl = NESFileLoader()
 
         val res = fl.loadFile("vnes.nes.zip")
 

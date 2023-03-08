@@ -27,8 +27,8 @@ public final class CPU implements Runnable{
 	Thread myThread;
 
 	// References to other parts of NES :
-	private NES nes;
-	private MemoryMapper mmap;
+
+	private MemoryMapper memoryMapper;
 	private short[] mem;
 
 	// CPU Registers:
@@ -66,20 +66,32 @@ public final class CPU implements Runnable{
 	public boolean stopRunning;
 	public boolean crash;
 
+    private Memory cpuMem;
+    private Memory ppuMem;
+    private Memory sprMem;
+    private PPU ppu;
+    private PAPU papu;
+
 
 	// Constructor:
-	public CPU(NES nes){
-		this.nes = nes;
+	public CPU(){
+		//this.nes = nes;
 	}
 
 	// Initialize:
-	public void init(){
+	public void init(MemoryMapper memoryMapper, Memory cpuMem, Memory ppuMem, Memory sprMem, PPU ppu, PAPU papu) {
 
 		// Get Op data:
 		opdata = CpuInfo.opData;
 
 		// Get Memory Mapper:
-		this.mmap = nes.getMemoryMapper();
+		this.memoryMapper = memoryMapper;
+
+		this.cpuMem = cpuMem;
+		this.ppuMem = ppuMem;
+		this.sprMem = sprMem;
+		this.ppu = ppu;
+		this.papu = papu;
 
 		// Reset crash flag:
 		crash = false;
@@ -217,13 +229,9 @@ public final class CPU implements Runnable{
 		// (when memory mappers switch ROM banks
 		// this will be written to, no need to
 		// update reference):
-		mem = nes.cpuMem.mem;
+		mem = cpuMem.mem;
 
 		// References to other parts of NES:
-		MemoryMapper mmap = nes.memMapper;
-		PPU 		 ppu  = nes.ppu;
-		PAPU 		 papu = nes.papu;
-
 
 		// Registers:
 		int REG_ACC 	= REG_ACC_NEW;
@@ -313,7 +321,7 @@ public final class CPU implements Runnable{
 
 			}
 
-			opinf = opdata[mmap.load(REG_PC+1)];
+			opinf = opdata[memoryMapper.load(REG_PC+1)];
 			cycleCount = (opinf>>24);
 			cycleAdd = 0;
 
@@ -444,7 +452,7 @@ public final class CPU implements Runnable{
 					if(addr < 0x1FFF){
 						addr = mem[addr] + (mem[(addr&0xFF00)|(((addr&0xFF)+1)&0xFF)]<<8);// Read from address given in op
 					}else{
-						addr = mmap.load(addr)+(mmap.load((addr&0xFF00)|(((addr&0xFF)+1)&0xFF))<<8);
+						addr = memoryMapper.load(addr)+(memoryMapper.load((addr&0xFF00)|(((addr&0xFF)+1)&0xFF))<<8);
 					}
 					break;
 
@@ -1259,7 +1267,9 @@ public final class CPU implements Runnable{
 					if(!crash){
 						crash = true;
 						stopRunning = true;
-						nes.gui.showErrorMsg("Game crashed, invalid opcode at address $"+Misc.hex16(opaddr));
+						//nes.gui.showErrorMsg("Game crashed, invalid opcode at address $"+Misc.hex16(opaddr));
+                        // TODO: Return message to GUI
+                        System.out.println("Game crashed, invalid opcode at address $"+Misc.hex16(opaddr));
 					}
 					break;
 
@@ -1308,14 +1318,14 @@ public final class CPU implements Runnable{
 	}
 
 	private int load(int addr){
-		return addr<0x2000 ? mem[addr&0x7FF] : mmap.load(addr);
+		return addr<0x2000 ? mem[addr&0x7FF] : memoryMapper.load(addr);
 	}
 
 	private int load16bit(int addr){
 		return addr<0x1FFF ?
 			mem[addr&0x7FF] | (mem[(addr+1)&0x7FF]<<8)
 			:
-			mmap.load(addr) | (mmap.load(addr+1)<<8)
+			memoryMapper.load(addr) | (memoryMapper.load(addr+1)<<8)
 			;
 	}
 
@@ -1323,7 +1333,7 @@ public final class CPU implements Runnable{
 		if(addr < 0x2000){
 			mem[addr&0x7FF] = val;
 		}else{
-			mmap.write(addr,val);
+			memoryMapper.write(addr,val);
 		}
 	}
 
@@ -1339,7 +1349,7 @@ public final class CPU implements Runnable{
 	}
 
 	public void push(int value){
-		mmap.write(REG_SP,(short)value);
+		memoryMapper.write(REG_SP,(short)value);
 		REG_SP--;
 		REG_SP = 0x0100 | (REG_SP&0xFF);
 	}
@@ -1351,7 +1361,7 @@ public final class CPU implements Runnable{
 	public short pull(){
 		REG_SP++;
 		REG_SP = 0x0100 | (REG_SP&0xFF);
-		return mmap.load(REG_SP);
+		return memoryMapper.load(REG_SP);
 	}
 
 	public boolean pageCrossed(int addr1, int addr2){
@@ -1364,7 +1374,7 @@ public final class CPU implements Runnable{
 
 	private void doNonMaskableInterrupt(int status){
 
-		int temp = mmap.load(0x2000); // Read PPU status.
+		int temp = memoryMapper.load(0x2000); // Read PPU status.
 		if((temp&128)!=0){ // Check whether VBlank Interrupts are enabled
 
 			REG_PC_NEW++;
@@ -1373,7 +1383,7 @@ public final class CPU implements Runnable{
 			//F_INTERRUPT_NEW = 1;
 			push(status);
 
-			REG_PC_NEW = mmap.load(0xFFFA) | (mmap.load(0xFFFB) << 8);
+			REG_PC_NEW = memoryMapper.load(0xFFFA) | (memoryMapper.load(0xFFFB) << 8);
 			REG_PC_NEW--;
 
 		}
@@ -1383,7 +1393,7 @@ public final class CPU implements Runnable{
 
 	private void doResetInterrupt(){
 
-		REG_PC_NEW = mmap.load(0xFFFC) | (mmap.load(0xFFFD) << 8);
+		REG_PC_NEW = memoryMapper.load(0xFFFC) | (memoryMapper.load(0xFFFD) << 8);
 		REG_PC_NEW--;
 
 	}
@@ -1397,7 +1407,7 @@ public final class CPU implements Runnable{
 		F_INTERRUPT_NEW = 1;
 		F_BRK_NEW = 0;
 
-		REG_PC_NEW = mmap.load(0xFFFE) | (mmap.load(0xFFFF) << 8);
+		REG_PC_NEW = memoryMapper.load(0xFFFE) | (memoryMapper.load(0xFFFF) << 8);
 		REG_PC_NEW--;
 
 	}
@@ -1422,12 +1432,11 @@ public final class CPU implements Runnable{
 	}
 
 	public void setMapper(MemoryMapper mapper){
-		mmap = mapper;
+		memoryMapper = mapper;
 	}
 
 	public void destroy(){
-		nes 	= null;
-		mmap 	= null;
+		memoryMapper = null;
     }
 
 }

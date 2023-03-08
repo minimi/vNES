@@ -47,7 +47,7 @@ public class NES {
 
 
         // Create system units:
-        cpu = new CPU(this);
+        cpu = new CPU();
         palTable = new PaletteTable();
         ppu = new PPU(this);
         papu = new PAPU(this);
@@ -68,7 +68,7 @@ public class NES {
         }
 
         // Initialize units:
-        cpu.init();
+        cpu.init(this.memMapper, this.cpuMem, this.ppuMem, this.sprMem, this.ppu, this.papu);
         ppu.init();
 
         // Enable sound:
@@ -258,7 +258,7 @@ public class NES {
         {
             // Load ROM file:
 
-            var fileLoader = new KFileLoader();
+            var fileLoader = new NESFileLoader();
             rom = new ROM();
 
             rom.load(file, fileLoader);
@@ -302,7 +302,7 @@ public class NES {
         clearCPUMemory();
 
         cpu.reset();
-        cpu.init();
+        cpu.init(this.memMapper, this.cpuMem, this.ppuMem, this.sprMem, this.ppu, this.papu);
         ppu.reset();
         palTable.reset();
         papu.reset();
