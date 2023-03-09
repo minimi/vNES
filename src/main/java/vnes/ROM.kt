@@ -19,12 +19,6 @@ package vnes
 
 import vnes.mappers.*
 
-private typealias RomData = ShortArray
-private typealias RomHeader = ShortArray
-
-class ROMException @JvmOverloads constructor(override val message: String?, override val cause: Throwable? = null) :
-    RuntimeException(message, cause)
-
 class ROM {
     //var failedSaveFile = false
     //var saveRamUpToDate = true
@@ -91,35 +85,50 @@ class ROM {
             throw ROMException("Unable to load ROM file.", it)
         }
 
-        if (!b.header.hasValidSignature) {
+        val header = ShortArray(16)
+        for (i in 0..15) {
+            header[i] = b[i]
+        }
+
+        // Check first four bytes:
+        val signature = String(
+            byteArrayOf(
+                header[0].toByte(),
+                header[1].toByte(),
+                header[2].toByte(),
+                header[3].toByte()
+            )
+        )
+
+        if (signature != "NES" + String(byteArrayOf(0x1A))) {
             throw ROMException("Invalid ROM file. Header is incorrect.")
         }
 
         // Read header:
-        romBankCount = b.header[4].toInt()
-        vromBankCount = b.header[5].toInt() * 2 // Get the number of 4kB banks, not 8kB
+        romBankCount = header[4].toInt()
+        vromBankCount = header[5].toInt() * 2 // Get the number of 4kB banks, not 8kB
 
-        mirroring = if (b.header[6].toInt() and 0b00000001 != 0) 1 else 0
-        batteryRam = b.header[6].toInt() and 0b00000010 != 0
-        hasTrainer = b.header[6].toInt() and 0b00000100 != 0
-        fourScreen = b.header[6].toInt() and 0b00001000 != 0
-        mapperType = b.header[6].toInt() shr 4 or (b.header[7].toInt() and 0xF0)
+        mirroring = if (header[6].toInt() and 0b00000001 != 0) 1 else 0
+        batteryRam = header[6].toInt() and 0b00000010 != 0
+        hasTrainer = header[6].toInt() and 0b00000100 != 0
+        fourScreen = header[6].toInt() and 0b00001000 != 0
+        mapperType = header[6].toInt() shr 4 or (header[7].toInt() and 0xF0)
 
-        isNES20 = b.header[7].toInt() and 0x0C == 0x08
+        isNES20 = header[7].toInt() and 0x0C == 0x08
 
         // Battery RAM?
 //        if (batteryRam) {
 //            loadBatteryRam();
 //        }
-
         // Check whether byte 8-15 are zero's:
         var foundError = false
         for (i in 8..15) {
-            if (b.header[i].toInt() != 0) {
+            if (header[i].toInt() != 0) {
                 foundError = true
                 break
             }
         }
+
         if (foundError) {
             // Ignore byte 7.
             mapperType = mapperType and 0xF
@@ -360,31 +369,6 @@ class ROM {
     fun destroy() {
 //      closeRom();
     }
-
-    private val RomData.header: RomHeader
-        get() {
-            val header = ShortArray(16)
-            for (i in 0..15) {
-                header[i] = this[i]
-            }
-            return header
-        }
-
-    private val RomHeader.hasValidSignature: Boolean
-        get() {
-
-            // Check first four bytes:
-            val signature = String(
-                byteArrayOf(
-                    header[0].toByte(),
-                    header[1].toByte(),
-                    header[2].toByte(),
-                    header[3].toByte()
-                )
-            )
-
-            return signature == "NES" + String(byteArrayOf(0x1A))
-        }
 
     companion object {
         // Mirroring types:
