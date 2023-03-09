@@ -19,6 +19,7 @@ package vnes
 
 import java.awt.Color
 import java.awt.Graphics
+import java.util.Properties
 import javax.swing.JFrame
 
 
@@ -181,7 +182,11 @@ class vNES : JFrame(), UI, HardwareResetListener {
     }
 
     private fun getParameter(name: String): String? {
-        return null
+        val inputStream = javaClass.classLoader.getResourceAsStream("vnes.properties")
+        val props = inputStream?.let {
+            Properties().apply { load(it) }
+        }
+        return props?.getProperty(name)
     }
 
     private fun readParams() {
