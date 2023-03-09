@@ -74,10 +74,10 @@ public class ScreenView extends BufferView {
 
     public void imageReady(boolean skipFrame) {
 
-        if (!Globals.focused) {
+        if (!vNES.focused) {
             setFocusable(true);
             requestFocus();
-            Globals.focused = true;
+            vNES.focused = true;
         }
 
         // Draw image first:

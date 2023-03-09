@@ -21,35 +21,39 @@ import vnes.mappers.MemoryMapper;
 
 public class NES {
 
-    public AppletUI gui;
+    public UI gui;
+
     public CPU cpu;
+
     public PPU ppu;
     public PAPU papu;
-    public Memory cpuMem;
-    public Memory ppuMem;
-    public Memory sprMem;
+    public Memory cpuMem = new Memory(0x10000);	// Main memory (internal to CPU);
+    public Memory ppuMem = new Memory(0x8000);	// VRAM memory (internal to PPU);
+    public Memory sprMem = new Memory(0x100);	// Sprite RAM  (internal to PPU);
     public MemoryMapper memMapper;
     public PaletteTable palTable;
     public ROM rom;
-    int cc;
+
     public String romFile;
     boolean isRunning = false;
 
+    private final FileLoader fileLoader;
+
+    public InputHandler inputHandler1;
+    public InputHandler inputHandler2;
+
     // Creates the NES system.
-    public NES(AppletUI gui) {
+    public NES(UI gui, FileLoader fileLoader, InputHandler inputHandler1, InputHandler inputHandler2) {
 
         this.gui = gui;
-
-        // Create memory:
-        cpuMem = new Memory(0x10000);	// Main memory (internal to CPU)
-        ppuMem = new Memory(0x8000);	// VRAM memory (internal to PPU)
-        sprMem = new Memory(0x100);	// Sprite RAM  (internal to PPU)
-
+        this.fileLoader = fileLoader;
+        this.inputHandler1 = inputHandler1;
+        this.inputHandler2 = inputHandler2;
 
         // Create system units:
         cpu = new CPU();
         palTable = new PaletteTable();
-        ppu = new PPU(this);
+        ppu = new PPU(this, this.memMapper);
         papu = new PAPU(this);
 
         // Init sound registers:
@@ -68,8 +72,8 @@ public class NES {
         }
 
         // Initialize units:
-        cpu.init(this.memMapper, this.cpuMem, this.ppuMem, this.sprMem, this.ppu, this.papu);
-        ppu.init();
+        cpu.init(this.memMapper, this.cpuMem, this.ppu, this.papu);
+        ppu.init(this.cpuMem, this.ppuMem, this.sprMem, cpu::requestIrq);
 
         // Enable sound:
         enableSound(true);
@@ -79,67 +83,67 @@ public class NES {
 
     }
 
-    public boolean stateLoad(ByteBuffer buf) {
-
-        boolean continueEmulation = false;
-        boolean success;
-
-        // Pause emulation:
-        if (cpu.isRunning()) {
-            continueEmulation = true;
-            stopEmulation();
-        }
-
-        // Check version:
-        if (buf.readByte() == 1) {
-
-            // Let units load their state from the buffer:
-            cpuMem.stateLoad(buf);
-            ppuMem.stateLoad(buf);
-            sprMem.stateLoad(buf);
-            cpu.stateLoad(buf);
-            memMapper.stateLoad(buf);
-            ppu.stateLoad(buf);
-            success = true;
-
-        } else {
-
-            //System.out.println("State file has wrong format. version="+buf.readByte(0));
-            success = false;
-
-        }
-
-        // Continue emulation:
-        if (continueEmulation) {
-            startEmulation();
-        }
-
-        return success;
-
-    }
-
-    public void stateSave(ByteBuffer buf) {
-
-        boolean continueEmulation = isRunning();
-        stopEmulation();
-
-        // Version:
-        buf.putByte((short) 1);
-
-        // Let units save their state:
-        cpuMem.stateSave(buf);
-        ppuMem.stateSave(buf);
-        sprMem.stateSave(buf);
-        cpu.stateSave(buf);
-        memMapper.stateSave(buf);
-        ppu.stateSave(buf);
-
-        // Continue emulation:
-        if (continueEmulation) {
-            startEmulation();
-        }
-
-    }
+//    public boolean stateLoad(ByteBuffer buf) {
+//
+//        boolean continueEmulation = false;
+//        boolean success;
+//
+//        // Pause emulation:
+//        if (cpu.isRunning()) {
+//            continueEmulation = true;
+//            stopEmulation();
+//        }
+//
+//        // Check version:
+//        if (buf.readByte() == 1) {
+//
+//            // Let units load their state from the buffer:
+//            cpuMem.stateLoad(buf);
+//            ppuMem.stateLoad(buf);
+//            sprMem.stateLoad(buf);
+//            cpu.stateLoad(buf);
+//            memMapper.stateLoad(buf);
+//            ppu.stateLoad(buf);
+//            success = true;
+//
+//        } else {
+//
+//            //System.out.println("State file has wrong format. version="+buf.readByte(0));
+//            success = false;
+//
+//        }
+//
+//        // Continue emulation:
+//        if (continueEmulation) {
+//            startEmulation();
+//        }
+//
+//        return success;
+//
+//    }
+//
+//    public void stateSave(ByteBuffer buf) {
+//
+//        boolean continueEmulation = isRunning();
+//        stopEmulation();
+//
+//        // Version:
+//        buf.putByte((short) 1);
+//
+//        // Let units save their state:
+//        cpuMem.stateSave(buf);
+//        ppuMem.stateSave(buf);
+//        sprMem.stateSave(buf);
+//        cpu.stateSave(buf);
+//        memMapper.stateSave(buf);
+//        ppu.stateSave(buf);
+//
+//        // Continue emulation:
+//        if (continueEmulation) {
+//            startEmulation();
+//        }
+//
+//    }
 
     public boolean isRunning() {
 
@@ -149,15 +153,15 @@ public class NES {
 
     public void startEmulation() {
 
-        if (Globals.enableSound && !papu.isRunning()) {
+        if (vNES.enableSound && !papu.isRunning()) {
             papu.start();
         }
-        {
-            if (rom != null && rom.isValid() && !cpu.isRunning()) {
-                cpu.beginExecution();
-                isRunning = true;
-            }
+
+        if (rom != null && rom.isValid() && !cpu.isRunning()) {
+            cpu.beginExecution();
+            isRunning = true;
         }
+
     }
 
     public void stopEmulation() {
@@ -166,7 +170,7 @@ public class NES {
             isRunning = false;
         }
 
-        if (Globals.enableSound && papu.isRunning()) {
+        if (vNES.enableSound && papu.isRunning()) {
             papu.stop();
         }
     }
@@ -181,7 +185,7 @@ public class NES {
 
     public void clearCPUMemory() {
 
-        short flushval = Globals.memoryFlushValue;
+        short flushval = vNES.memoryFlushValue;
         for (int i = 0; i < 0x2000; i++) {
             cpuMem.mem[i] = flushval;
         }
@@ -195,11 +199,11 @@ public class NES {
 
     }
 
-    public void setGameGenieState(boolean enable) {
-        if (memMapper != null) {
-            memMapper.setGameGenieState(enable);
-        }
-    }
+//    public void setGameGenieState(boolean enable) {
+//        if (memMapper != null) {
+//            memMapper.setGameGenieState(enable);
+//        }
+//    }
 
     // Returns CPU object.
     public CPU getCpu() {
@@ -257,8 +261,6 @@ public class NES {
 
         {
             // Load ROM file:
-
-            var fileLoader = new NESFileLoader();
             rom = new ROM();
 
             rom.load(file, fileLoader);
@@ -302,14 +304,19 @@ public class NES {
         clearCPUMemory();
 
         cpu.reset();
-        cpu.init(this.memMapper, this.cpuMem, this.ppuMem, this.sprMem, this.ppu, this.papu);
+        cpu.init(this.memMapper, this.cpuMem, this.ppu, this.papu);
         ppu.reset();
         palTable.reset();
         papu.reset();
 
-        InputHandler joy1 = gui.getJoy1();
+        InputHandler joy1 = inputHandler1;
+        InputHandler joy2 = inputHandler2;
+
         if (joy1 != null) {
             joy1.reset();
+        }
+        if (joy2 != null) {
+            joy2.reset();
         }
 
     }
@@ -329,7 +336,7 @@ public class NES {
         }
 
         //System.out.println("** SOUND ENABLE = "+enable+" **");
-        Globals.enableSound = enable;
+        vNES.enableSound = enable;
 
         if (wasRunning) {
             startEmulation();
@@ -339,8 +346,8 @@ public class NES {
 
     public void setFramerate(int rate) {
 
-        Globals.preferredFrameRate = rate;
-        Globals.frameTime = 1000000 / rate;
+        vNES.preferredFrameRate = rate;
+        vNES.frameTime = 1000000 / rate;
         papu.setSampleRate(papu.getSampleRate(), false);
 
     }

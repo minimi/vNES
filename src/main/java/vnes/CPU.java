@@ -67,8 +67,7 @@ public final class CPU implements Runnable{
 	public boolean crash;
 
     private Memory cpuMem;
-    private Memory ppuMem;
-    private Memory sprMem;
+
     private PPU ppu;
     private PAPU papu;
 
@@ -79,7 +78,7 @@ public final class CPU implements Runnable{
 	}
 
 	// Initialize:
-	public void init(MemoryMapper memoryMapper, Memory cpuMem, Memory ppuMem, Memory sprMem, PPU ppu, PAPU papu) {
+	public void init(MemoryMapper memoryMapper, Memory cpuMem, PPU ppu, PAPU papu) {
 
 		// Get Op data:
 		opdata = CpuInfo.opData;
@@ -88,8 +87,6 @@ public final class CPU implements Runnable{
 		this.memoryMapper = memoryMapper;
 
 		this.cpuMem = cpuMem;
-		this.ppuMem = ppuMem;
-		this.sprMem = sprMem;
 		this.ppu = ppu;
 		this.papu = papu;
 
@@ -262,9 +259,10 @@ public final class CPU implements Runnable{
 		int temp;
 		int add;
 
-		boolean palEmu = Globals.palEmulation;
-		boolean emulateSound = Globals.enableSound;
-		boolean asApplet = Globals.appletMode;
+		boolean palEmu = vNES.palEmulation;
+		boolean emulateSound = vNES.enableSound;
+		boolean asApplet = vNES.appletMode;
+
 		stopRunning = false;
 
 		while(true){

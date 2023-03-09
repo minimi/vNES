@@ -16,12 +16,21 @@
  */
 
 package vnes;
+
+import vnes.mappers.MemoryMapper;
+
 public class PPU {
 
     private NES nes;
+
+    private IRQRequestListener irqRequestListener;
+
     //private HiResTimer timer;
     private Memory ppuMem;
+    private Memory cpuMem;
     private Memory sprMem;
+    private MemoryMapper memMapper;
+
     // Rendering Options:
     boolean showSpr0Hit = false;
     boolean showSoundBuffer = false;
@@ -140,15 +149,19 @@ public class PPU {
     int bufferSize, available, scale;
     public int cycles = 0;
 
-    public PPU(NES nes) {
+    public PPU(NES nes, MemoryMapper memMapper) {
         this.nes = nes;
+        this.memMapper = memMapper;
     }
 
-    public void init() {
+    public void init(Memory cpuMem, Memory ppuMem, Memory sprMem, IRQRequestListener irqRequestListener) {
 
         // Get the memory:
-        ppuMem = nes.getPpuMemory();
-        sprMem = nes.getSprMemory();
+        this.cpuMem = cpuMem;
+        this.ppuMem = ppuMem;
+        this.sprMem = sprMem;
+
+        this.irqRequestListener = irqRequestListener;
 
         updateControlReg1(0);
         updateControlReg2(0);
@@ -339,12 +352,12 @@ public class PPU {
 
         // Start VBlank period:
         // Do VBlank.
-        if (Globals.debug) {
+        if (vNES.debug) {
             //System.out.println("VBlank occurs!");
         }
 
         // Do NMI:
-        nes.getCpu().requestIrq(CPU.IRQ_NMI);
+        irqRequestListener.requestIrq(CPU.IRQ_NMI);
 
         // Make sure everything is rendered:
         if (lastRenderedScanline < 239) {
@@ -645,9 +658,9 @@ public class PPU {
     public void setStatusFlag(int flag, boolean value) {
 
         int n = 1 << flag;
-        int memValue = nes.getCpuMemory().load(0x2002);
+        int memValue = cpuMem.load(0x2002);
         memValue = ((memValue & (255 - n)) | (value ? n : 0));
-        nes.getCpuMemory().write(0x2002, (short) memValue);
+        cpuMem.write(0x2002, (short) memValue);
 
     }
 
@@ -656,7 +669,7 @@ public class PPU {
     // Read the Status Register.
     public short readStatusRegister() {
 
-        tmp = nes.getCpuMemory().load(0x2002);
+        tmp = cpuMem.load(0x2002);
 
         // Reset scroll & VRAM Address toggle:
         firstWrite = true;
@@ -841,7 +854,6 @@ public class PPU {
     // into Sprite RAM.
     public void sramDMA(short value) {
 
-        Memory cpuMem = nes.getCpuMemory();
         int baseAddress = value * 0x100;
         short data;
         for (int i = sramAddress; i < 256; i++) {
@@ -986,8 +998,8 @@ public class PPU {
             if (address < vramMirrorTable.length) {
                 writeMem(vramMirrorTable[address], value);
             } else {
-                if (Globals.debug) {
-                    //System.out.println("Invalid VRAM address: "+Misc.hex16(address));
+                if (vNES.debug) {
+                    System.out.println("Invalid VRAM address: "+Misc.hex16(address));
                     nes.getCpu().setCrashed(true);
                 }
             }
@@ -1012,7 +1024,7 @@ public class PPU {
 
     private void renderFramePartially(int[] buffer, int startScan, int scanCount) {
 
-        if (f_spVisibility == 1 && !Globals.disableSprites) {
+        if (f_spVisibility == 1 && !vNES.disableSprites) {
             renderSpritesPartially(startScan, scanCount, true);
         }
 
@@ -1029,7 +1041,7 @@ public class PPU {
             }
         }
 
-        if (f_spVisibility == 1 && !Globals.disableSprites) {
+        if (f_spVisibility == 1 && !vNES.disableSprites) {
             renderSpritesPartially(startScan, scanCount, false);
         }
 
@@ -1663,7 +1675,7 @@ public class PPU {
         // Set VBlank flag:
         setStatusFlag(STATUS_VBLANK, true);
         //nes.getCpu().doNonMaskableInterrupt();
-        nes.getCpu().requestIrq(CPU.IRQ_NMI);
+        irqRequestListener.requestIrq(CPU.IRQ_NMI);
 
     }
 
@@ -1796,7 +1808,7 @@ public class PPU {
             }
              */
             // Sprite data:
-            short[] sprmem = nes.getSprMemory().mem;
+            short[] sprmem = sprMem.mem;
             for (int i = 0; i < sprmem.length; i++) {
                 spriteRamWriteUpdate(i, sprmem[i]);
             }
@@ -1955,7 +1967,7 @@ public class PPU {
         java.util.Arrays.fill(oldFrame, -1);
 
         // Initialize stuff:
-        init();
+        init(cpuMem, ppuMem, sprMem, irqRequestListener);
 
     }
 

@@ -50,8 +50,8 @@ public class MapperDefault implements MemoryMapper {
         this.cpu = nes.getCpu();
         this.ppu = nes.getPpu();
         this.papu = nes.getPapu();
-        this.inputHandler1 = nes.gui.getJoy1();
-        this.inputHandler2 = nes.gui.getJoy2();
+        this.inputHandler1 = nes.inputHandler1;
+        this.inputHandler2 = nes.inputHandler2;
 
         cpuMemSize = cpuMem.getMemSize();
         joypadLastWrite = -1;

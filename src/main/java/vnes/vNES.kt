@@ -15,477 +15,523 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package vnes;
+package vnes
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color
+import java.awt.Graphics
+import javax.swing.JFrame
 
-public class vNES extends JFrame implements Runnable {
 
-    boolean scale;
-    boolean scanlines;
-    boolean sound;
-    boolean fps;
-    boolean stereo;
-    boolean timeemulation;
-    boolean showsoundbuffer;
-    int samplerate;
-    int romSize;
-    int progress;
-    AppletUI gui;
-    NES nes;
-    ScreenView panelScreen;
-    String rom = "";
-    Font progressFont;
-    Color bgColor = Color.black.darker().darker();
-    boolean started = false;
+fun main() {
+    vNES().apply {
+        start()
+    }
+}
 
-    public static void main(String[] args) {
-        var vNes = new vNES();
-        vNes.init();
-        vNes.start();
+@Suppress("ClassName")
+class vNES : JFrame(), UI, HardwareResetListener {
+
+    private lateinit var vScreen: ScreenView
+
+    private val fileLoader: FileLoader = NESFileLoader()
+    private val kbJoy1: KbInputHandler = KbInputHandler(0, this)
+    private val kbJoy2: KbInputHandler = KbInputHandler(1, this)
+
+    private val nes: NES = NES(this, fileLoader, kbJoy1, kbJoy2)
+
+    private var scale = false
+    private var scanlines = false
+    private var sound = false
+    private var fps = false
+    private var stereo = false
+    private var timeemulation = false
+    private var showsoundbuffer = false
+    //var samplerate = 0
+
+    private var rom: String? = ""
+
+    private var bgColor = Color.black.darker().darker()
+    private var started = false
+
+    @JvmField
+    var timer = HiResTimer()
+    private var t1: Long = 0
+    private var t2: Long = 0
+    private var sleepTime = 0
+
+    init {
+        setDefaultLookAndFeelDecorated(true)
+        defaultCloseOperation = EXIT_ON_CLOSE
+        title = "vNES"
+
+        init()
     }
 
-    public void init() {
-        initKeyCodes();
-        readParams();
-        System.gc();
+    fun init() {
+        readParams()
 
-        gui = new AppletUI(this);
-        gui.init(false);
+        vScreen = ScreenView(nes, 256, 240)
+        vScreen.setBgColor(bgColor.rgb)
+        vScreen.init()
+        vScreen.setNotifyImageReady(true)
 
-        Globals.appletMode = true;
-        Globals.memoryFlushValue = 0x00; // make SMB1 hacked version work.
+        // Grab Controller Setting for Player 1:
+        kbJoy1.mapKey(InputHandler.KEY_A, keycodes[controls["p1_a"]]!!)
+        kbJoy1.mapKey(InputHandler.KEY_B, (keycodes[controls["p1_b"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_START, (keycodes[controls["p1_start"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_SELECT, (keycodes[controls["p1_select"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_UP, (keycodes[controls["p1_up"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_DOWN, (keycodes[controls["p1_down"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_LEFT, (keycodes[controls["p1_left"]])!!)
+        kbJoy1.mapKey(InputHandler.KEY_RIGHT, (keycodes[controls["p1_right"]])!!)
+        vScreen.addKeyListener(kbJoy1)
 
-        nes = gui.getNES();
-        nes.enableSound(sound);
-        nes.reset();
+        // Grab Controller Setting for Player 2:
+        kbJoy2.mapKey(InputHandler.KEY_A, (keycodes[controls["p2_a"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_B, (keycodes[controls["p2_b"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_START, (keycodes[controls["p2_start"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_SELECT, (keycodes[controls["p2_select"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_UP, (keycodes[controls["p2_up"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_DOWN, (keycodes[controls["p2_down"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_LEFT, (keycodes[controls["p2_left"]])!!)
+        kbJoy2.mapKey(InputHandler.KEY_RIGHT, (keycodes[controls["p2_right"]])!!)
+        vScreen.addKeyListener(kbJoy2)
+
+        appletMode = true
+        memoryFlushValue = 0x00 // make SMB1 hacked version work.
+        nes.enableSound(sound)
+        nes.reset()
+
+        System.gc()
     }
 
-    public void addScreenView() {
+    override fun destroy() {
+        if (nes.getCpu().isRunning) {
+            stop()
+        }
+        System.runFinalization()
+        System.gc()
+    }
 
-        panelScreen = (ScreenView) gui.getScreenView();
-        panelScreen.setFPSEnabled(fps);
-
-        this.setLayout(null);
+    private fun addScreenView() {
+        val panelScreen = screenView as ScreenView
+        panelScreen.setFPSEnabled(fps)
+        layout = null
 
         if (scale) {
-
             if (scanlines) {
-                panelScreen.setScaleMode(BufferView.SCALE_SCANLINE);
+                panelScreen.scaleMode = BufferView.SCALE_SCANLINE
             } else {
-                panelScreen.setScaleMode(BufferView.SCALE_NORMAL);
+                panelScreen.scaleMode = BufferView.SCALE_NORMAL
             }
-
-            this.setSize(512, 480);
-            this.setBounds(0, 0, 512, 480);
-            panelScreen.setBounds(0, 0, 512, 480);
-
+            this.setSize(512, 480)
+            this.setBounds(0, 0, 512, 480)
+            panelScreen.setBounds(0, 0, 512, 480)
         } else {
-
-            panelScreen.setBounds(0, 0, 256, 240);
-
+            this.setSize(256, 240)
+            this.setBounds(0, 0, 256, 240)
+            panelScreen.setBounds(0, 0, 256, 240)
         }
 
-        this.setIgnoreRepaint(true);
-        this.add(panelScreen);
-
-        this.setVisible(true);
-
+        ignoreRepaint = true
+        this.add(panelScreen)
+        this.isVisible = true
     }
 
-    public void start() {
+    fun start() {
 
-        Thread t = new Thread(this);
-        t.start();
-
-    }
-
-    public void run() {
-
-        // Set font to be used for progress display of loading:
-        progressFont = new Font("Tahoma", Font.BOLD, 12);
-
-        scale = true;
+        // DEBUG:
+        scale = true
         // Can start painting:
-        started = true;
+        started = true
 
         // Load ROM file:
-        System.out.println("vNES 2.16 \u00A9 2006-2013 Open Emulation Project");
-        System.out.println("For updates, visit www.openemulation.com");
-        System.out.println("Use of this program subject to GNU GPL, Version 3.");
-
-        nes.loadRom(rom);
-
-        if (nes.rom.isValid()) {
+        println("vNES 2.16 \u00A9 2006-2013 Open Emulation Project")
+        println("For updates, visit www.openemulation.com")
+        println("Use of this program subject to GNU GPL, Version 3.")
+        nes.loadRom(rom)
+        if (nes.rom.isValid) {
 
             // Add the screen buffer:
-            addScreenView();
+            addScreenView()
 
             // Set some properties:
-            Globals.timeEmulation = timeemulation;
-            nes.ppu.showSoundBuffer = showsoundbuffer;
+            timeEmulation = timeemulation
+            nes.ppu.showSoundBuffer = showsoundbuffer
 
             // Start emulation:
             //System.out.println("vNES is now starting the processor.");
-            nes.getCpu().beginExecution();
-
+            nes.getCpu().beginExecution()
         } else {
 
             // ROM file was invalid.
-            System.out.println("vNES was unable to find (" + rom + ").");
-
+            println("vNES was unable to find ($rom).")
         }
-
     }
 
-    public void stop() {
-        nes.stopEmulation();
+    private fun stop() {
+        nes.stopEmulation()
         //System.out.println("vNES has stopped the processor.");
-        nes.getPapu().stop();
-        this.destroy();
-
+        nes.getPapu().stop()
+        destroy()
     }
 
-    public void destroy() {
-
-        if (nes != null && nes.getCpu().isRunning()) {
-            stop();
-        }
-
-        if (nes != null) {
-            nes.destroy();
-        }
-        if (gui != null) {
-            gui.destroy();
-        }
-
-        gui = null;
-        nes = null;
-        panelScreen = null;
-        rom = null;
-
-        System.runFinalization();
-        System.gc();
-
-    }
-
-    public void showLoadProgress(int percentComplete) {
-
-        progress = percentComplete;
-        paint(getGraphics());
-
-    }
-
-    // Show the progress graphically.
-    public void paint(Graphics g) {
-
-        String pad;
-        String disp;
-        int scrw, scrh;
-        int txtw, txth;
-
-        if (!started) {
-            return;
-        }
-
-        // Get screen size:
-        if (scale) {
-            scrw = 512;
-            scrh = 480;
-        } else {
-            scrw = 256;
-            scrh = 240;
-        }
-
-        // Fill background:
-        g.setColor(bgColor);
-        g.fillRect(0, 0, scrw, scrh);
-
-        // Prepare text:
-        if (progress < 10) {
-            pad = "  ";
-        } else if (progress < 100) {
-            pad = " ";
-        } else {
-            pad = "";
-        }
-        disp = "vNES is Loading Game... " + pad + progress + "%";
-
-        // Measure text:
-        g.setFont(progressFont);
-        txtw = g.getFontMetrics(progressFont).stringWidth(disp);
-        txth = g.getFontMetrics(progressFont).getHeight();
-
-        // Display text:
-        g.setFont(progressFont);
-        g.setColor(Color.white);
-        g.drawString(disp, scrw / 2 - txtw / 2, scrh / 2 - txth / 2);
-        g.drawString(disp, scrw / 2 - txtw / 2, scrh / 2 - txth / 2);
-        g.drawString("vNES \u00A9 2006-2013 Open Emulation Project", 12, 464);
-    }
-
-    public void update(Graphics g) {
+    override fun update(g: Graphics) {
         // do nothing.
     }
 
-    private String getParameter(String name) {
-        return null;
+    private fun getParameter(name: String): String? {
+        return null
     }
 
-    public void readParams() {
-
-        String tmp;
-
-        tmp = getParameter("rom");
-        if (tmp == null || tmp.equals("")) {
-            rom = "vnes.nes";
+    private fun readParams() {
+        var tmp = getParameter("rom")
+        rom = if (tmp == null || tmp == "") {
+            "vnes.nes"
         } else {
-            rom = tmp;
+            tmp
         }
-
-        tmp = getParameter("scale");
-        if (tmp == null || tmp.equals("")) {
-            scale = false;
+        tmp = getParameter("scale")
+        scale = if (tmp == null || tmp == "") {
+            false
         } else {
-            scale = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("sound");
-        if (tmp == null || tmp.equals("")) {
-            sound = true;
+        tmp = getParameter("sound")
+        sound = if (tmp == null || tmp == "") {
+            true
         } else {
-            sound = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("stereo");
-        if (tmp == null || tmp.equals("")) {
-            stereo = true; // on by default
+        tmp = getParameter("stereo")
+        stereo = if (tmp == null || tmp == "") {
+            true // on by default
         } else {
-            stereo = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("scanlines");
-        if (tmp == null || tmp.equals("")) {
-            scanlines = false;
+        tmp = getParameter("scanlines")
+        scanlines = if (tmp == null || tmp == "") {
+            false
         } else {
-            scanlines = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("fps");
-        if (tmp == null || tmp.equals("")) {
-            fps = false;
+        tmp = getParameter("fps")
+        fps = if (tmp == null || tmp == "") {
+            false
         } else {
-            fps = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("timeemulation");
-        if (tmp == null || tmp.equals("")) {
-            timeemulation = true;
+        tmp = getParameter("timeemulation")
+        timeemulation = if (tmp == null || tmp == "") {
+            true
         } else {
-            timeemulation = tmp.equals("on");
+            tmp == "on"
         }
-
-        tmp = getParameter("showsoundbuffer");
-        if (tmp == null || tmp.equals("")) {
-            showsoundbuffer = false;
+        tmp = getParameter("showsoundbuffer")
+        showsoundbuffer = if (tmp == null || tmp == "") {
+            false
         } else {
-            showsoundbuffer = tmp.equals("on");
+            tmp == "on"
         }
 
         /* Controller Setup for Player 1 */
-
-        tmp = getParameter("p1_up");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_up", "VK_UP");
+        tmp = getParameter("p1_up")
+        if (tmp == null || tmp == "") {
+            controls["p1_up"] = "VK_UP"
         } else {
-            Globals.controls.put("p1_up", "VK_" + tmp);
+            controls["p1_up"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_down");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_down", "VK_DOWN");
+        tmp = getParameter("p1_down")
+        if (tmp == null || tmp == "") {
+            controls["p1_down"] = "VK_DOWN"
         } else {
-            Globals.controls.put("p1_down", "VK_" + tmp);
+            controls["p1_down"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_left");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_left", "VK_LEFT");
+        tmp = getParameter("p1_left")
+        if (tmp == null || tmp == "") {
+            controls["p1_left"] = "VK_LEFT"
         } else {
-            Globals.controls.put("p1_left", "VK_" + tmp);
+            controls["p1_left"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_right");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_right", "VK_RIGHT");
+        tmp = getParameter("p1_right")
+        if (tmp == null || tmp == "") {
+            controls["p1_right"] = "VK_RIGHT"
         } else {
-            Globals.controls.put("p1_right", "VK_" + tmp);
+            controls["p1_right"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_a");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_a", "VK_X");
+        tmp = getParameter("p1_a")
+        if (tmp == null || tmp == "") {
+            controls["p1_a"] = "VK_X"
         } else {
-            Globals.controls.put("p1_a", "VK_" + tmp);
+            controls["p1_a"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_b");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_b", "VK_Z");
+        tmp = getParameter("p1_b")
+        if (tmp == null || tmp == "") {
+            controls["p1_b"] = "VK_Z"
         } else {
-            Globals.controls.put("p1_b", "VK_" + tmp);
+            controls["p1_b"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_start");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_start", "VK_ENTER");
+        tmp = getParameter("p1_start")
+        if (tmp == null || tmp == "") {
+            controls["p1_start"] = "VK_ENTER"
         } else {
-            Globals.controls.put("p1_start", "VK_" + tmp);
+            controls["p1_start"] = "VK_$tmp"
         }
-        tmp = getParameter("p1_select");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p1_select", "VK_CONTROL");
+        tmp = getParameter("p1_select")
+        if (tmp == null || tmp == "") {
+            controls["p1_select"] = "VK_CONTROL"
         } else {
-            Globals.controls.put("p1_select", "VK_" + tmp);
+            controls["p1_select"] = "VK_$tmp"
         }
 
         /* Controller Setup for Player 2 */
-
-        tmp = getParameter("p2_up");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_up", "VK_NUMPAD8");
+        tmp = getParameter("p2_up")
+        if (tmp == null || tmp == "") {
+            controls["p2_up"] = "VK_NUMPAD8"
         } else {
-            Globals.controls.put("p2_up", "VK_" + tmp);
+            controls["p2_up"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_down");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_down", "VK_NUMPAD2");
+        tmp = getParameter("p2_down")
+        if (tmp == null || tmp == "") {
+            controls["p2_down"] = "VK_NUMPAD2"
         } else {
-            Globals.controls.put("p2_down", "VK_" + tmp);
+            controls["p2_down"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_left");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_left", "VK_NUMPAD4");
+        tmp = getParameter("p2_left")
+        if (tmp == null || tmp == "") {
+            controls["p2_left"] = "VK_NUMPAD4"
         } else {
-            Globals.controls.put("p2_left", "VK_" + tmp);
+            controls["p2_left"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_right");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_right", "VK_NUMPAD6");
+        tmp = getParameter("p2_right")
+        if (tmp == null || tmp == "") {
+            controls["p2_right"] = "VK_NUMPAD6"
         } else {
-            Globals.controls.put("p2_right", "VK_" + tmp);
+            controls["p2_right"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_a");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_a", "VK_NUMPAD7");
+        tmp = getParameter("p2_a")
+        if (tmp == null || tmp == "") {
+            controls["p2_a"] = "VK_NUMPAD7"
         } else {
-            Globals.controls.put("p2_a", "VK_" + tmp);
+            controls["p2_a"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_b");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_b", "VK_NUMPAD9");
+        tmp = getParameter("p2_b")
+        if (tmp == null || tmp == "") {
+            controls["p2_b"] = "VK_NUMPAD9"
         } else {
-            Globals.controls.put("p2_b", "VK_" + tmp);
+            controls["p2_b"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_start");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_start", "VK_NUMPAD1");
+        tmp = getParameter("p2_start")
+        if (tmp == null || tmp == "") {
+            controls["p2_start"] = "VK_NUMPAD1"
         } else {
-            Globals.controls.put("p2_start", "VK_" + tmp);
+            controls["p2_start"] = "VK_$tmp"
         }
-        tmp = getParameter("p2_select");
-        if (tmp == null || tmp.equals("")) {
-            Globals.controls.put("p2_select", "VK_NUMPAD3");
+        tmp = getParameter("p2_select")
+        if (tmp == null || tmp == "") {
+            controls["p2_select"] = "VK_NUMPAD3"
         } else {
-            Globals.controls.put("p2_select", "VK_" + tmp);
-        }
-
-        tmp = getParameter("romsize");
-        if (tmp == null || tmp.equals("")) {
-            romSize = -1;
-        } else {
-            try {
-                romSize = Integer.parseInt(tmp);
-            } catch (Exception e) {
-                romSize = -1;
-            }
+            controls["p2_select"] = "VK_$tmp"
         }
     }
 
-    public void initKeyCodes() {
-        Globals.keycodes.put("VK_SPACE", 32);
-        Globals.keycodes.put("VK_PAGE_UP", 33);
-        Globals.keycodes.put("VK_PAGE_DOWN", 34);
-        Globals.keycodes.put("VK_END", 35);
-        Globals.keycodes.put("VK_HOME", 36);
-        Globals.keycodes.put("VK_DELETE", 127);
-        Globals.keycodes.put("VK_INSERT", 155);
-        Globals.keycodes.put("VK_LEFT", 37);
-        Globals.keycodes.put("VK_UP", 38);
-        Globals.keycodes.put("VK_RIGHT", 39);
-        Globals.keycodes.put("VK_DOWN", 40);
-        Globals.keycodes.put("VK_0", 48);
-        Globals.keycodes.put("VK_1", 49);
-        Globals.keycodes.put("VK_2", 50);
-        Globals.keycodes.put("VK_3", 51);
-        Globals.keycodes.put("VK_4", 52);
-        Globals.keycodes.put("VK_5", 53);
-        Globals.keycodes.put("VK_6", 54);
-        Globals.keycodes.put("VK_7", 55);
-        Globals.keycodes.put("VK_8", 56);
-        Globals.keycodes.put("VK_9", 57);
-        Globals.keycodes.put("VK_A", 65);
-        Globals.keycodes.put("VK_B", 66);
-        Globals.keycodes.put("VK_C", 67);
-        Globals.keycodes.put("VK_D", 68);
-        Globals.keycodes.put("VK_E", 69);
-        Globals.keycodes.put("VK_F", 70);
-        Globals.keycodes.put("VK_G", 71);
-        Globals.keycodes.put("VK_H", 72);
-        Globals.keycodes.put("VK_I", 73);
-        Globals.keycodes.put("VK_J", 74);
-        Globals.keycodes.put("VK_K", 75);
-        Globals.keycodes.put("VK_L", 76);
-        Globals.keycodes.put("VK_M", 77);
-        Globals.keycodes.put("VK_N", 78);
-        Globals.keycodes.put("VK_O", 79);
-        Globals.keycodes.put("VK_P", 80);
-        Globals.keycodes.put("VK_Q", 81);
-        Globals.keycodes.put("VK_R", 82);
-        Globals.keycodes.put("VK_S", 83);
-        Globals.keycodes.put("VK_T", 84);
-        Globals.keycodes.put("VK_U", 85);
-        Globals.keycodes.put("VK_V", 86);
-        Globals.keycodes.put("VK_W", 87);
-        Globals.keycodes.put("VK_X", 88);
-        Globals.keycodes.put("VK_Y", 89);
-        Globals.keycodes.put("VK_Z", 90);
-        Globals.keycodes.put("VK_NUMPAD0", 96);
-        Globals.keycodes.put("VK_NUMPAD1", 97);
-        Globals.keycodes.put("VK_NUMPAD2", 98);
-        Globals.keycodes.put("VK_NUMPAD3", 99);
-        Globals.keycodes.put("VK_NUMPAD4", 100);
-        Globals.keycodes.put("VK_NUMPAD5", 101);
-        Globals.keycodes.put("VK_NUMPAD6", 102);
-        Globals.keycodes.put("VK_NUMPAD7", 103);
-        Globals.keycodes.put("VK_NUMPAD8", 104);
-        Globals.keycodes.put("VK_NUMPAD9", 105);
-        Globals.keycodes.put("VK_MULTIPLY", 106);
-        Globals.keycodes.put("VK_ADD", 107);
-        Globals.keycodes.put("VK_SUBTRACT", 109);
-        Globals.keycodes.put("VK_DECIMAL", 110);
-        Globals.keycodes.put("VK_DIVIDE", 111);
-        Globals.keycodes.put("VK_BACK_SPACE", 8);
-        Globals.keycodes.put("VK_TAB", 9);
-        Globals.keycodes.put("VK_ENTER", 10);
-        Globals.keycodes.put("VK_SHIFT", 16);
-        Globals.keycodes.put("VK_CONTROL", 17);
-        Globals.keycodes.put("VK_ALT", 18);
-        Globals.keycodes.put("VK_PAUSE", 19);
-        Globals.keycodes.put("VK_ESCAPE", 27);
-        Globals.keycodes.put("VK_OPEN_BRACKET", 91);
-        Globals.keycodes.put("VK_BACK_SLASH", 92);
-        Globals.keycodes.put("VK_CLOSE_BRACKET", 93);
-        Globals.keycodes.put("VK_SEMICOLON", 59);
-        Globals.keycodes.put("VK_QUOTE", 222);
-        Globals.keycodes.put("VK_COMMA", 44);
-        Globals.keycodes.put("VK_MINUS", 45);
-        Globals.keycodes.put("VK_PERIOD", 46);
-        Globals.keycodes.put("VK_SLASH", 47);
+    override fun imageReady(skipFrame: Boolean) {
+
+        // Sound stuff:
+        val tmp = nes.getPapu().bufferIndex
+        if (enableSound && timeEmulation && tmp > 0) {
+            val min_avail = nes.getPapu().line.bufferSize - 4 * tmp
+            var timeToSleep = nes.papu.getMillisToAvailableAbove(min_avail).toLong()
+            do {
+                try {
+                    Thread.sleep(timeToSleep)
+                } catch (_: InterruptedException) {
+                }
+            } while (nes.papu.getMillisToAvailableAbove(min_avail).also { timeToSleep = it.toLong() } > 0)
+            nes.getPapu().writeBuffer()
+        }
+
+        // Sleep a bit if sound is disabled:
+        if (timeEmulation && !enableSound) {
+            sleepTime = frameTime
+            if (timer.currentMicros().also { t2 = it } - t1 < sleepTime) {
+                timer.sleepMicros(sleepTime - (t2 - t1))
+            }
+        }
+
+        // Update timer:
+        t1 = t2
+    }
+
+    //    public void showLoadProgress(int percentComplete) {
+    //
+    //        // Show ROM load progress:
+    //        progress = percentComplete;
+    //        paint(getGraphics());
+    //
+    //        // Sleep a bit:
+    //        timer.sleepMicros(20 * 1000);
+    //
+    //    }
+    override fun getScreenView(): BufferView {
+        return vScreen
+    }
+
+    override fun getPatternView(): BufferView? {
+        return null
+    }
+
+    override fun getSprPalView(): BufferView? {
+        return null
+    }
+
+    override fun getNameTableView(): BufferView? {
+        return null
+    }
+
+    override fun getImgPalView(): BufferView? {
+        return null
+    }
+
+    override fun getTimer(): HiResTimer {
+        return timer
+    }
+
+    override fun onHardwareResetRequest() {
+        if (nes.isRunning()) {
+            nes.stopEmulation()
+            nes.reset()
+            nes.reloadRom()
+            nes.startEmulation()
+        }
+    }
+
+    companion object {
+
+        @JvmField
+        var CPU_FREQ_NTSC = 1789772.5
+
+        @Suppress("unused")
+        @JvmField
+        var CPU_FREQ_PAL = 1773447.4
+
+        @JvmField
+        var preferredFrameRate = 60
+
+        // Microseconds per frame:
+        @JvmField
+        var frameTime = 1000000 / preferredFrameRate
+
+        // What value to flush memory with on power-up:
+        @JvmField
+        var memoryFlushValue: Short = 0xFF
+
+        const val debug = true
+
+        @JvmField
+        var appletMode = true
+
+        @JvmField
+        var disableSprites = false
+
+        @JvmField
+        var timeEmulation = true
+
+        @JvmField
+        var palEmulation = false
+
+        @JvmField
+        var enableSound = true
+
+        @JvmField
+        var focused = false
+
+        /** Java key codes */
+        @JvmField
+        var keycodes: HashMap<String, Int> = hashMapOf(
+            "VK_SPACE" to 32,
+            "VK_PAGE_UP" to 33,
+            "VK_PAGE_DOWN" to 34,
+            "VK_END" to 35,
+            "VK_HOME" to 36,
+            "VK_DELETE" to 127,
+            "VK_INSERT" to 155,
+            "VK_LEFT" to 37,
+            "VK_UP" to 38,
+            "VK_RIGHT" to 39,
+            "VK_DOWN" to 40,
+            "VK_0" to 48,
+            "VK_1" to 49,
+            "VK_2" to 50,
+            "VK_3" to 51,
+            "VK_4" to 52,
+            "VK_5" to 53,
+            "VK_6" to 54,
+            "VK_7" to 55,
+            "VK_8" to 56,
+            "VK_9" to 57,
+            "VK_A" to 65,
+            "VK_B" to 66,
+            "VK_C" to 67,
+            "VK_D" to 68,
+            "VK_E" to 69,
+            "VK_F" to 70,
+            "VK_G" to 71,
+            "VK_H" to 72,
+            "VK_I" to 73,
+            "VK_J" to 74,
+            "VK_K" to 75,
+            "VK_L" to 76,
+            "VK_M" to 77,
+            "VK_N" to 78,
+            "VK_O" to 79,
+            "VK_P" to 80,
+            "VK_Q" to 81,
+            "VK_R" to 82,
+            "VK_S" to 83,
+            "VK_T" to 84,
+            "VK_U" to 85,
+            "VK_V" to 86,
+            "VK_W" to 87,
+            "VK_X" to 88,
+            "VK_Y" to 89,
+            "VK_Z" to 90,
+            "VK_NUMPAD0" to 96,
+            "VK_NUMPAD1" to 97,
+            "VK_NUMPAD2" to 98,
+            "VK_NUMPAD3" to 99,
+            "VK_NUMPAD4" to 100,
+            "VK_NUMPAD5" to 101,
+            "VK_NUMPAD6" to 102,
+            "VK_NUMPAD7" to 103,
+            "VK_NUMPAD8" to 104,
+            "VK_NUMPAD9" to 105,
+            "VK_MULTIPLY" to 106,
+            "VK_ADD" to 107,
+            "VK_SUBTRACT" to 109,
+            "VK_DECIMAL" to 110,
+            "VK_DIVIDE" to 111,
+            "VK_BACK_SPACE" to 8,
+            "VK_TAB" to 9,
+            "VK_ENTER" to 10,
+            "VK_SHIFT" to 16,
+            "VK_CONTROL" to 17,
+            "VK_ALT" to 18,
+            "VK_PAUSE" to 19,
+            "VK_ESCAPE" to 27,
+            "VK_OPEN_BRACKET" to 91,
+            "VK_BACK_SLASH" to 92,
+            "VK_CLOSE_BRACKET" to 93,
+            "VK_SEMICOLON" to 59,
+            "VK_QUOTE" to 222,
+            "VK_COMMA" to 44,
+            "VK_MINUS" to 45,
+            "VK_PERIOD" to 46,
+            "VK_SLASH" to 47
+        )
+
+        @JvmField
+        var controls = HashMap<String, String>() //vNES controls codes
+
     }
 }

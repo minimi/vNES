@@ -17,25 +17,7 @@
 
 package vnes;
 
-import java.awt.*;
-
-public interface UI {
-
-    BufferView getScreenView();
-
-    BufferView getPatternView();
-
-    BufferView getSprPalView();
-
-    BufferView getNameTableView();
-
-    BufferView getImgPalView();
-
-    HiResTimer getTimer();
-
-    void imageReady(boolean skipFrame);
-
-
-    void destroy();
-
+public interface HardwareResetListener {
+    void onHardwareResetRequest();
 }
+

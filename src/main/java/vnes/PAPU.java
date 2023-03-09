@@ -159,7 +159,7 @@ public final class PAPU {
 
         if (mixerInfo == null || mixerInfo.length == 0) {
             //System.out.println("No audio mixer available, sound disabled.");
-            Globals.enableSound = false;
+            vNES.enableSound = false;
             return;
         }
 
@@ -810,10 +810,10 @@ public final class PAPU {
         }
 
         sampleRate = rate;
-        sampleTimerMax = (int) ((1024.0 * Globals.CPU_FREQ_NTSC * Globals.preferredFrameRate) /
+        sampleTimerMax = (int) ((1024.0 * vNES.CPU_FREQ_NTSC * vNES.preferredFrameRate) /
                 (sampleRate * 60.0d));
 
-        frameTime = (int) ((14915.0 * (double) Globals.preferredFrameRate) / 60.0d);
+        frameTime = (int) ((14915.0 * (double) vNES.preferredFrameRate) / 60.0d);
 
         sampleTimer = 0;
         bufferIndex = 0;
