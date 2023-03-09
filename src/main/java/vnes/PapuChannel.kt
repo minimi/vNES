@@ -14,18 +14,11 @@
  * You should have received a copy of the GNU General Public License along with
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package vnes
 
-package vnes;
-
-public interface PapuChannel {
-
-    public void writeReg(int address, int value);
-
-    public void setEnabled(boolean value);
-
-    public boolean isEnabled();
-
-    public void reset();
-
-    public int getLengthStatus();
+interface PapuChannel {
+    fun writeReg(address: Int, value: Int)
+    var isEnabled: Boolean
+    fun reset()
+    val lengthStatus: Int
 }
