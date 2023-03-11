@@ -20,9 +20,6 @@ package vnes
 import vnes.mappers.*
 
 class ROM {
-    //var failedSaveFile = false
-    //var saveRamUpToDate = true
-
     lateinit var rom: Array<ShortArray>
     private lateinit var vrom: Array<ShortArray>
     private var saveRam: ShortArray? = null
@@ -141,6 +138,7 @@ class ROM {
 
         // Load PRG-ROM banks:
         var offset = 16
+        if (hasTrainer) offset += 512
         for (i in 0 until romBankCount) {
             for (j in 0..16383) {
                 if (offset + j >= b.size) {
@@ -170,8 +168,6 @@ class ROM {
         }
 
         // Convert CHR-ROM banks to tiles:
-        //System.out.println("Converting CHR-ROM image data..");
-        //System.out.println("VROM bank count: "+vromCount);
         var tileIndex: Int
         var leftOver: Int
         for (v in 0 until vromBankCount) {
@@ -366,9 +362,6 @@ class ROM {
     //        }
     //
     //    }
-    fun destroy() {
-//      closeRom();
-    }
 
     companion object {
         // Mirroring types:
@@ -503,6 +496,6 @@ class ROM {
 enum class Mirroring(val id: Int) {
     Vertical(0),
     Horizontal(1),
-    Fourscreen(2),
+    FourScreen(2),
 }
 
